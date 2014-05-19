@@ -1,0 +1,158 @@
+<html>
+	<head>
+		<title>javascript</title>
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <link href="bootstrap.min.css" rel="stylesheet">
+        <link href="bootstrap-responsive.min.css" rel="stylesheet">
+    </head>
+	
+	<body>
+        &nbsp;<br>
+        <div class="container">
+            <div class="row">
+                <button class="btn btn-large btn-primary btn-block" onclick="acao1();">Ação 1</button>
+                <button class="btn btn-large btn-warning btn-block" onclick="acao2();">Ação 2</button>
+                <button class="btn btn-large btn-danger btn-block" onclick="acao3();">Ação 3</button>
+            </div>
+            
+            <hr>
+            
+            <div class="row">
+                <div id="msg"></div>
+            </div>
+        </div>
+        
+        <script>
+            
+            // Executa o método sayHello passando 'Edson' como parametro
+            //
+            function acao1() {
+                calliOSFunction('sayHello', ['Edson'], onSuccess, onError);
+            }
+        
+            // Executa o método sayHello não passando parametros
+            //
+            function acao2() {
+                calliOSFunction('sayHello', [], onSuccess, onError);
+            }
+        
+            // Executa o método digaOi passando 'Edson' como parametro
+            //
+            function acao3() {
+                calliOSFunction('digaOi', ['Edson'], onSuccess, onError);
+            }
+        
+            // Callback para sucesso
+            //
+            function onSuccess(ret) {
+                if (ret) {
+                    var obj = JSON.parse(ret);
+                    document.getElementById("msg").innerHTML = obj.result;
+                }
+            }
+        
+            // Callback para erro
+            //
+            function onError(ret) {
+                if (ret) {
+                    var obj = JSON.parse(ret);
+                    document.getElementById("msg").innerHTML = obj.error;
+                }
+            }
+        
+            // Função local para alterar a cor de fundo do documento. Recebe como parametro um JSON com a cor desejada.
+            //
+            function mudaCor(args) {
+                if (args) {
+                    var obj = JSON.parse(args);
+                    document.body.style.backgroundColor = obj.cor;
+                }
+            }
+        
+            // Função resposnável para montar a requisição que será passada para Objective-C
+            //
+            function calliOSFunction(functionName, args, successCallback, errorCallback) {
+                var url = "js2ios://";
+                var callInfo = {};
+                
+                callInfo.functionname = functionName;
+                
+                if (successCallback) {
+                    if (typeof successCallback == 'function') {
+                        var callbackFuncName = createCallbackFunction(functionName + "_" + "successCallback", successCallback);
+                        callInfo.success = callbackFuncName;
+                    }
+                    else
+                        callInfo.success = successCallback;
+                }
+                
+                if (errorCallback) {
+                    if (typeof errorCallback == 'function') {
+                        var callbackFuncName = createCallbackFunction(functionName + "_" + "errorCallback", errorCallback);
+                        callInfo.error = callbackFuncName;
+                    }
+                    else
+                        callInfo.error = errorCallback;
+                }
+                
+                if (args) {
+                    callInfo.args = args;
+                }
+                
+                url += JSON.stringify(callInfo)
+                
+                var iFrame = createIFrame(url);
+                iFrame.parentNode.removeChild(iFrame);
+            }
+        
+            // Função que cria o IFRAME para realizar a requisição que acionará o delegate do UIWebView
+            //
+            function createIFrame(url) {
+                var rootElm = document.documentElement;
+                var newFrameElm = document.createElement("IFRAME");
+                newFrameElm.setAttribute("src", url);
+                rootElm.appendChild(newFrameElm);
+                return newFrameElm;
+            }
+            
+            // *********************************************************************************************
+            // Funções responsáveis por criar as funções de callback
+            // http://ramkulkarni.com/blog/calling-objective-c-function-from-javascript-in-ios-applications/
+            // *********************************************************************************************
+            
+            __functionIndexMap = {};
+            
+            // Função responsável por registrar a função e retornar o nome do callback
+            //
+            function createCallbackFunction(funcName, callbackFunc) {
+                if (callbackFunc && callbackFunc.name != null && callbackFunc.name.length > 0) {
+                    return callbackFunc.name;
+                }
+                
+                if (typeof window[funcName+0] != 'function') {
+                    window[funcName+0] = callbackFunc;
+                    __functionIndexMap[funcName] = 0;
+                    return funcName+0
+                    
+                } else {
+                    var maxIndex = __functionIndexMap[funcName];
+                    var callbackFuncStr = callbackFunc.toString();
+                    for (var i = 0; i <= maxIndex; i++) {
+                        var tmpName = funcName + i;
+                        if (window[tmpName].toString() == callbackFuncStr)
+                        return tmpName;
+                    }
+                    
+                    var newIndex = ++__functionIndexMap[funcName];
+                    window[funcName+newIndex] = callbackFunc;
+                    return funcName+newIndex;
+                }
+            }
+        
+        </script>
+        
+        <script src="jquery.js"></script>
+        <script src="bootstrap.min.js"></script>
+    </body>
+</html>
